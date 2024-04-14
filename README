@@ -9,19 +9,6 @@ In order for generating the framework for a platform it should be added under
 
 Set the variables specific to the project before running build.
 
-For macOS make sure Architectures sections has the following values for 
-building for both Intel and ARM.
-
-Architectures: $(ARCHS_STANDARD)
-Base SDK: macOS
-Build Active Architectures Only
-  Debug: Yes
-  Release: No
-Supported Platforms: iOS macOS
-
-The Base SDK can be Automatic as well which is the default. This will work for
-iOS build also.
-
 The bundle will have the following slices.
 
 $ ls Frameworks/framework-name.xcframework/
@@ -56,3 +43,9 @@ Make sure the required directories are created.
 
 # Delete existing frameworks
 ./build clean-framework
+
+# Generate xcframework for iOS only project
+./build ios
+
+# Generate xcframework for macOS only project
+./build macos

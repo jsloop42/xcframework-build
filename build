@@ -15,6 +15,12 @@
 # ./build framework
 # ./build sign
 
+# Build xcframework for iOS only
+# ./build ios
+
+# Build xcframework for macOS only
+# ./build macos
+
 framework_name=""
 project_name=""
 scheme=""
@@ -35,21 +41,25 @@ code_sign_identity=""
 declare -A ios_props=(
     ["destination"]="generic/platform=iOS"
     ["archive_path"]="$archive_dir/$ios_framework_name"
+    ["sdk"]="iphoneos"
 )
 
 declare -A ios_simulator_props=(
     ["destination"]="generic/platform=iOS Simulator"
     ["archive_path"]="$archive_dir/$ios_simulator_framework_name"
+    ["sdk"]="iphonesimulator"
 )
 
 declare -A macos_props=(
     ["destination"]="generic/platform=macOS"
     ["archive_path"]="$archive_dir/$macos_framework_name"
+    ["sdk"]="macosx"
 )
 
 declare -A macos_catalyst_props=(
     ["destination"]="generic/platform=macOS,variant=Mac Catalyst"
     ["archive_path"]="$archive_dir/$macos_catalyst_framework_name"
+    ["sdk"]="macosx"
 )
 
 declare -a destinations=(
@@ -57,6 +67,15 @@ declare -a destinations=(
     ios_simulator_props
     macos_props
     macos_catalyst_props
+)
+
+declare -a destinations_ios=(
+    ios_props
+    ios_simulator_props
+)
+
+declare -a destinations_macos=(
+    macos_props
 )
 
 function create_directory() {
@@ -69,6 +88,7 @@ function create_directory() {
 function create_archive() {
     destination=$1
     archive_path=$2
+    sdk=$3
     echo "Archiving for $destination"
     xcodebuild archive \
         -project "$project_name".xcodeproj \
@@ -76,21 +96,22 @@ function create_archive() {
         -configuration "$configuration" \
         -destination "$destination" \
         -archivePath "$archive_path" \
-        -parallelizeTargets \
+        -sdk "$sdk"
         SKIP_INSTALL=NO \
         BUILD_LIBRARIES_FOR_DISTRIBUTION=YES
 }
 
 function create_archives() {
-    for dest_map in $destinations; do
+    local dest_list=("$@")
+    for dest_map in $dest_list; do
         local -A dest=("${(Pkv@)dest_map}") 
-        create_archive $dest[destination] $dest[archive_path]
+        create_archive $dest[destination] $dest[archive_path] $dest[sdk]
         echo
     done            
 }
 
-function create_xcframework() {
-    echo "Creating xcframework"
+function create_xcframework_all() {
+    echo "Creating xcframework for iOS and macOS"
     xcodebuild -create-xcframework \
         -archive "$archive_dir/$ios_framework_name".xcarchive -framework "$framework_name".framework \
         -archive "$archive_dir/$ios_simulator_framework_name".xcarchive -framework "$framework_name".framework \
@@ -99,8 +120,33 @@ function create_xcframework() {
         -output "$framework_dir/$framework_name".xcframework
 }
 
-function archive() {
-    create_archives
+function create_xcframework_ios() {
+    echo "Creating xcframework for iOS"
+    xcodebuild -create-xcframework \
+        -archive "$archive_dir/$ios_framework_name".xcarchive -framework "$framework_name".framework \
+        -archive "$archive_dir/$ios_simulator_framework_name".xcarchive -framework "$framework_name".framework \
+        -output "$framework_dir/$framework_name".xcframework
+}
+
+function create_xcframework_macos() {
+    echo "Creating xcframework for macOS"
+    xcodebuild -create-xcframework \
+        -archive "$archive_dir/$macos_framework_name".xcarchive -framework "$framework_name".framework \
+        -output "$framework_dir/$framework_name".xcframework
+}
+
+function archive_all() {
+    create_archives "$destinations[@]"
+    echo "Archive complete"
+}
+
+function archive_ios() {
+    create_archives "$destinations_ios[@]"
+    echo "Archive complete"
+}
+
+function archive_macos() {
+    create_archives "$destinations_macos[@]"
     echo "Archive complete"
 }
 
@@ -119,27 +165,23 @@ function clean() {
     clean_xcframework
 }
 
-function build_all() {
-    create_directory $archive_dir
-    create_directory $framework_dir
-    clean
-    archive
-    create_xcframework
-    code_sign
-}
-
 opt=$1
 
 # No arg, run all steps
 if [ -z "$opt" ]; then
-    build_all
+    create_directory $archive_dir
+    create_directory $framework_dir
+    clean
+    archive_all
+    create_xcframework_all
+    code_sign
 else
     case $opt in
         "archive")
-            archive
+            archive_all
             ;;
         "framework")
-            create_xcframework
+            create_xcframework_all
             ;;
         "sign")
             code_sign
@@ -149,6 +191,16 @@ else
             ;;
         "clean-framework")
             clean_xcframework
+            ;;
+        "ios")
+            archive_ios
+            create_xcframework_ios
+            code_sign
+            ;;
+        "macos")
+            archive_macos
+            create_xcframework_macos
+            code_sign
             ;;
         *)
             echo "Unknown argument"
