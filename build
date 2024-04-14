@@ -76,6 +76,7 @@ function create_archive() {
         -configuration "$configuration" \
         -destination "$destination" \
         -archivePath "$archive_path" \
+        -parallelizeTargets \
         SKIP_INSTALL=NO \
         BUILD_LIBRARIES_FOR_DISTRIBUTION=YES
 }
@@ -118,16 +119,20 @@ function clean() {
     clean_xcframework
 }
 
-opt=$1
-
-# No arg, run all steps
-if [ -z "$opt" ]; then
+function build_all() {
     create_directory $archive_dir
     create_directory $framework_dir
     clean
     archive
     create_xcframework
     code_sign
+}
+
+opt=$1
+
+# No arg, run all steps
+if [ -z "$opt" ]; then
+    build_all
 else
     case $opt in
         "archive")

@@ -7,6 +7,16 @@ macOS platforms. Other platforms can be added as required easily.
 In order for generating the framework for a platform it should be added under
 "Supported Destinations" for the framework target in Xcode.
 
+For macOS make sure Architectures sections has the following values for 
+building for both Intel and ARM.
+
+Architectures: $(ARCHS_STANDARD)
+Base SDK: macOS
+Build Active Architectures Only
+  Debug: Yes
+  Release: No
+Supported Platforms: iOS macOS
+
 Set the variables specific to the project before running build.
 
 Build
