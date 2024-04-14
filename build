@@ -96,7 +96,7 @@ function create_archive() {
         -configuration "$configuration" \
         -destination "$destination" \
         -archivePath "$archive_path" \
-        -sdk "$sdk"
+        -sdk "$sdk" \
         SKIP_INSTALL=NO \
         BUILD_LIBRARIES_FOR_DISTRIBUTION=YES
 }
