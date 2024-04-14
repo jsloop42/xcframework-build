@@ -1,0 +1,155 @@
+#!/bin/zsh
+
+#  build
+#  A build script to generate universal xcframework for iOS and macOS platforms.
+#
+#  Created by Jaseem V V on 14.04.2024.
+#
+
+# Clean build:
+# ./build 
+
+# Build with individual steps
+# ./build clean  # deletes all archives and frameworks
+# ./build archive
+# ./build framework
+# ./build sign
+
+framework_name=""
+project_name=""
+scheme=""
+# The directory where the xcarchive will be created
+archive_dir="Archives"
+# The directory where the xcframework will be generated
+framework_dir="Frameworks"
+configuration="Release"
+ios_framework_name="$framework_name-iOS"
+ios_simulator_framework_name="$framework_name-iOS-Simulator"
+macos_framework_name="$framework_name-macOS"
+macos_catalyst_framework_name="$framework_name-macOS-Catalyst"
+# Apple Development certificate name as found in Keychain
+code_sign_identity=""
+
+# Platforms. Additional platforms can be added as needed.
+
+declare -A ios_props=(
+    ["destination"]="generic/platform=iOS"
+    ["archive_path"]="$archive_dir/$ios_framework_name"
+)
+
+declare -A ios_simulator_props=(
+    ["destination"]="generic/platform=iOS Simulator"
+    ["archive_path"]="$archive_dir/$ios_simulator_framework_name"
+)
+
+declare -A macos_props=(
+    ["destination"]="generic/platform=macOS"
+    ["archive_path"]="$archive_dir/$macos_framework_name"
+)
+
+declare -A macos_catalyst_props=(
+    ["destination"]="generic/platform=macOS,variant=Mac Catalyst"
+    ["archive_path"]="$archive_dir/$macos_catalyst_framework_name"
+)
+
+declare -a destinations=(
+    ios_props
+    ios_simulator_props
+    macos_props
+    macos_catalyst_props
+)
+
+function create_directory() {
+    dir_name=$1
+    if [ ! -d "$dir_name" ]; then
+        mkdir -p "$dir_name"
+    fi
+}
+
+function create_archive() {
+    destination=$1
+    archive_path=$2
+    echo "Archiving for $destination"
+    xcodebuild archive \
+        -project "$project_name".xcodeproj \
+        -scheme "$scheme" \
+        -configuration "$configuration" \
+        -destination "$destination" \
+        -archivePath "$archive_path" \
+        SKIP_INSTALL=NO \
+        BUILD_LIBRARIES_FOR_DISTRIBUTION=YES
+}
+
+function create_archives() {
+    for dest_map in $destinations; do
+        local -A dest=("${(Pkv@)dest_map}") 
+        create_archive $dest[destination] $dest[archive_path]
+        echo
+    done            
+}
+
+function create_xcframework() {
+    echo "Creating xcframework"
+    xcodebuild -create-xcframework \
+        -archive "$archive_dir/$ios_framework_name".xcarchive -framework "$framework_name".framework \
+        -archive "$archive_dir/$ios_simulator_framework_name".xcarchive -framework "$framework_name".framework \
+        -archive "$archive_dir/$macos_framework_name".xcarchive -framework "$framework_name".framework \
+        -archive "$archive_dir/$macos_catalyst_framework_name".xcarchive -framework "$framework_name".framework \
+        -output "$framework_dir/$framework_name".xcframework
+}
+
+function archive() {
+    create_archives
+    echo "Archive complete"
+}
+
+function code_sign() {
+    echo "Code signing"
+    codesign --timestamp -v -s "$code_sign_identity" "$framework_dir/$framework_name".xcframework
+}
+
+function clean_xcframework() {
+    rm -rf "$framework_dir"/*
+}
+
+function clean() {
+    echo "Cleanup"
+    rm -rf "$archive_dir"/*
+    clean_xcframework
+}
+
+opt=$1
+
+# No arg, run all steps
+if [ -z "$opt" ]; then
+    create_directory $archive_dir
+    create_directory $framework_dir
+    clean
+    archive
+    create_xcframework
+    code_sign
+else
+    case $opt in
+        "archive")
+            archive
+            ;;
+        "framework")
+            create_xcframework
+            ;;
+        "sign")
+            code_sign
+            ;;
+        "clean")
+            clean
+            ;;
+        "clean-framework")
+            clean_xcframework
+            ;;
+        *)
+            echo "Unknown argument"
+            exit 1
+            ;;
+    esac
+fi
+
+exit 0

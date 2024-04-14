@@ -1,0 +1,32 @@
+xcframework-build
+-----------------
+
+A build script to generate universal xcframework with code signing for iOS and
+macOS platforms. Other platforms can be added as required easily.
+
+Set the variables specific to the project before running build.
+
+Build
+-----
+
+./build
+
+Building individually
+---------------------
+
+Make sure the required directories are created.
+
+# Create archive
+./build archive
+
+# Create xcframework
+./build framework
+
+# Code sign
+./build sign
+
+# Delete existing archives, frameworks
+./build clean
+
+# Delete existing frameworks
+./build clean-framework
