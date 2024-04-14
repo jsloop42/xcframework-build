@@ -4,6 +4,9 @@ xcframework-build
 A build script to generate universal xcframework with code signing for iOS and
 macOS platforms. Other platforms can be added as required easily.
 
+In order for generating the framework for a platform it should be added under
+"Supported Destinations" for the framework target in Xcode.
+
 Set the variables specific to the project before running build.
 
 Build
