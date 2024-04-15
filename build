@@ -98,7 +98,8 @@ function create_archive() {
         -archivePath "$archive_path" \
         -sdk "$sdk" \
         SKIP_INSTALL=NO \
-        BUILD_LIBRARIES_FOR_DISTRIBUTION=YES
+        BUILD_LIBRARIES_FOR_DISTRIBUTION=YES \
+        SWIFT_SERIALIZE_DEBUGGING_OPTIONS=NO
 }
 
 function create_archives() {
